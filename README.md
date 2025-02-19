@@ -11,24 +11,7 @@ pcron is a lightweight task scheduler written in Bash. It allows users to schedu
 - **Scheduled execution**: Enable scheduled execution of user-defined tasks.
 - **Access control**: Provide access control based on lists of authorizations (`allow`) and restrictions (`deny`).
 - **Detailed logs**: Record executions and their results in a detailed log file.
-- **Simple interface**: Provide a user-friendly interface for managing scheduled tasks.
-
-## Installation
-1. Clone the repository or download `pcron.sh`.
-2. Move the main script to `/usr/bin/`:
-   ```bash
-	sudo mv pcron.sh /usr/bin/pcron.sh
-	sudo chmod +x /usr/bin/pcron.sh
-   ```
-3. Create the configuration directory:
-   ```bash
-   sudo mkdir -p /etc/pcron/
-   ```
-4. Ensure logs are stored properly:
-   ```bash
-   sudo touch /var/log/pcron
-   sudo chmod 666 /var/log/pcron
-   ```
+- **Simple interface**: Provide an interface for managing scheduled tasks.
 
 ## Configuration
 - Each user can have their own task file in `/etc/pcron/` named `pcrontab<user>` (e.g. `pcrontabalice`,`pcrontabbob`).
