@@ -1,0 +1,5 @@
+* */3 *~18 * * * echo "Tache executee toutes les 3 minutes sauf à l'heure 18" 
+
+* */2~10 * * * * echo "Tache executee toutes les 2 minutes sauf a minute 10" 
+
+* *~7 * * * * echo "Tache executee toutes les 15 secondes sauf à la minute 7" 

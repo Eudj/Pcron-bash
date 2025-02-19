@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+
+# Chemins pour l'arborescence spécifique
+ETC_DIR="$(dirname "$0")/../../etc/pcron"
+TEMP_DIR="$(dirname "$0")/../../var/log"
+ALLOW_FILE="$ETC_DIR/../pcron.allow"
+DENY_FILE="$ETC_DIR/../pcron.deny"
+
+# Vérification et création des dossiers nécessaires
+mkdir -p "$ETC_DIR"
+
+# Fonction d'usage
+define_usage() {
+    echo "Usage: pcron_manager [-u user] {-l | -r | -e}"
+    echo "       pcron_manager {-a | -d} -u user"
+    echo "Options pour gérer les fichiers pcrontab :"
+    echo "  -u user : Spécifie l'utilisateur (obligatoire sauf pour le root)"
+    echo "  -l      : Affiche le fichier pcrontab de l'utilisateur"
+    echo "  -r      : Supprime le fichier pcrontab de l'utilisateur"
+    echo "  -e      : Édite ou crée un fichier pcrontab temporaire"
+    echo "Options pour gérer les autorisations :"
+    echo "  -a      : Ajoute un utilisateur à pcron.allow"
+    echo "  -d      : Ajoute un utilisateur à pcron.deny"
+    exit 1
+}
+
+# Vérification des permissions
+define_permissions() {
+    local user=$1
+    if grep -q "^$user$" "$DENY_FILE"; then
+        echo "Utilisateur $user interdit d'utiliser pcron." >&2
+        exit 1
+    fi
+    if [ -f "$ALLOW_FILE" ] && ! grep -q "^$user$" "$ALLOW_FILE"; then
+        echo "Utilisateur $user non autorisé à utiliser pcron." >&2
+        exit 1
+    fi
+}
+
+# Gestion des arguments
+while getopts ":adu:lre" opt; do
+    case $opt in
+        a) action="allow" ;;
+        d) action="deny" ;;
+        u) user=$OPTARG ;;
+        l) action="list" ;;
+        r) action="remove" ;;
+        e) action="edit" ;;
+        *) define_usage ;;
+    esac
+done
+
+# Validation des paramètres
+if [ -z "$action" ]; then
+    echo "Vous devez spécifier une action." >&2
+    define_usage
+fi
+
+if [[ "$action" == "allow" || "$action" == "deny" ]]; then
+    if [ -z "$user" ]; then
+        echo "Vous devez spécifier un utilisateur avec -u." >&2
+        define_usage
+    fi
+fi
+
+# Gestion des autorisations
+case $action in
+    allow)
+        if grep -q "^$user$" "$DENY_FILE"; then
+            echo "Erreur : l'utilisateur $user est déjà dans pcron.deny."
+        else
+            if ! grep -q "^$user$" "$ALLOW_FILE"; then
+                echo "$user" >> "$ALLOW_FILE"
+                echo "Utilisateur $user ajouté à pcron.allow."
+            else
+                echo "Utilisateur $user est déjà dans pcron.allow."
+            fi
+        fi
+        ;;
+    deny)
+        if grep -q "^$user$" "$ALLOW_FILE"; then
+            echo "Erreur : l'utilisateur $user est déjà dans pcron.allow."
+        else
+            if ! grep -q "^$user$" "$DENY_FILE"; then
+                echo "$user" >> "$DENY_FILE"
+                echo "Utilisateur $user ajouté à pcron.deny."
+            else
+                echo "Utilisateur $user est déjà dans pcron.deny."
+            fi
+        fi
+        ;;
+    list|remove|edit)
+        # Définition du fichier pcrontab
+        user_file="$ETC_DIR/pcrontab${user:-root}"
+        define_permissions "${user:-root}"
+
+        case $action in
+            list)
+                if [ -f "$user_file" ]; then
+                    cat "$user_file"
+                else
+                    echo "Aucun fichier pcrontab trouvé pour ${user:-root}."
+                fi
+                ;;
+            remove)
+                if [ -f "$user_file" ]; then
+                    rm -f "$user_file"
+                    echo "Fichier pcrontab de ${user:-root} supprimé."
+                else
+                    echo "Aucun fichier pcrontab trouvé pour ${user:-root}."
+                fi
+                ;;
+            edit)
+                temp_file="$TEMP_DIR/pcrontab${user:-root}.tmp"
+                [ -f "$user_file" ] && cp "$user_file" "$temp_file"
+                touch "$temp_file"
+                nano "$temp_file"
+                mv "$temp_file" "$user_file"
+                echo "Fichier pcrontab de ${user:-root} mis à jour."
+                ;;
+        esac
+        ;;
+    *)
+        define_usage ;;
+esac
